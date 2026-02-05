@@ -61,3 +61,29 @@ if uploaded_file is not None:
 
                 # --- العرض المرئي ---
                 st.success(f"تم العثور على بيانات لـ {len(final_df)} إدارات تعليمية")
+                
+                col1, col2, col3 = st.columns(3)
+                col1.metric("إجمالي التلاميذ", f"{int(final_df['التلاميذ'].sum()):,}")
+                col2.metric("إجمالي الفصول", f"{int(final_df['الفصول'].sum()):,}")
+                col3.metric("متوسط الكثافة العام", f"{final_df['الكثافة'].mean():.1f}")
+
+                # الرسم البياني
+                st.subheader("📈 مقارنة كثافة الفصول")
+                fig, ax = plt.subplots(figsize=(10, 5))
+                # تلوين الأعمدة حسب مؤشر التحذير
+                colors = ['#e74c3c' if x > threshold else '#2ecc71' for x in final_df['الكثافة']]
+                sns.barplot(data=final_df, x='الإدارة', y='الكثافة', palette=colors, ax=ax)
+                ax.axhline(threshold, color='red', linestyle='--', label='حد الأمان (40)')
+                plt.xticks(rotation=0) # الإدارات تظهر أفقياً بوضوح
+                st.pyplot(fig)
+
+                # الجدول
+                st.subheader("📋 تقرير الحالة")
+                final_df['الحالة'] = final_df['الكثافة'].apply(lambda x: '⚠️ مرتفعة' if x > threshold else '✅ مستقرة')
+                st.table(final_df.sort_values(by='الكثافة', ascending=False))
+
+            else:
+                st.warning("تعذر العثور على صفوف تحتوي على أسماء الإدارات (أسوان، دراو.. إلخ). تأكد أن الملف هو النسخة الصحيحة.")
+
+        except Exception as e:
+            st.error(f"حدث خطأ أثناء المعالجة: {e}")
