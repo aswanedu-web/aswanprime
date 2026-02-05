@@ -8,7 +8,7 @@ st.set_page_config(page_title="تحليل كثافة الفصول 2026", layout=
 st.title("📊 نظام تحليل بيانات المديرية ومؤشرات الكثافة")
 
 # 1. خاصية رفع الملف لتجنب خطأ FileNotFoundError
-uploaded_file = st.file_uploader("قم برفع ملف الإحصاء (CSV)", type=["csv"])
+uploaded_file = st.file_uploader("قم برفع ملف الإحصاء (xlsx)", type=["xlsx"])
 
 if uploaded_file is not None:
     try:
