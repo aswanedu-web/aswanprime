@@ -6,7 +6,7 @@ import seaborn as sns
 st.set_page_config(page_title="تحليل كثافات أسوان", layout="wide")
 st.title("📊 لوحة مؤشرات الكثافة الطلابية - 2026")
 
-uploaded_file = st.file_uploader("قم برفع ملف الإحصاء", type=["xlsx"])
+uploaded_file = st.file_uploader("قم برفع ملف الإحصاء", type=["csv"])
 
 if uploaded_file is not None:
     # 1. تجربة الترميز العربي
