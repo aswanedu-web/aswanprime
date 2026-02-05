@@ -59,4 +59,18 @@ if uploaded_file is not None:
             st.subheader("📈 مخطط كثافة الفصول")
             fig, ax = plt.subplots(figsize=(10, 5))
             colors = ['#e74c3c' if x > threshold else '#2ecc71' for x in final_df['الكثافة']]
-            sns
+            sns.barplot(data=final_df, x='الإدارة', y='الكثافة', palette=colors, ax=ax)
+            ax.axhline(threshold, color='red', linestyle='--')
+            st.pyplot(fig)
+
+            # الجدول مع التحذير
+            st.subheader("⚠️ مؤشر الإنذار المبكر")
+            def highlight_danger(s):
+                return ['background-color: #ffcccc' if v > threshold else '' for v in s]
+            
+            st.dataframe(final_df.style.apply(highlight_danger, subset=['الكثافة']))
+
+        except Exception as e:
+            st.error(f"خطأ في معالجة محتوى الملف: {e}")
+    else:
+        st.error("فشل في قراءة ترميز الملف.")
