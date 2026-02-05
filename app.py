@@ -3,15 +3,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-st.title("📊 داشبورد كثافة الفصول - أسوان 2026")
+st.set_page_config(page_title="تحليل كثافات أسوان", layout="wide")
+st.title("📊 لوحة مؤشرات الكثافة الطلابية - 2026")
 
 uploaded_file = st.file_uploader("قم برفع ملف الإحصاء", type=["csv"])
 
 if uploaded_file is not None:
-    # 1. حل مشكلة الترميز
-    encodings = ['utf-8-sig', 'windows-1256', 'cp1256']
+    # 1. تجربة الترميز العربي
     df = None
-    for enc in encodings:
+    for enc in ['utf-8-sig', 'windows-1256', 'cp1256']:
         try:
             uploaded_file.seek(0)
             df = pd.read_csv(uploaded_file, encoding=enc, header=None)
@@ -21,65 +21,43 @@ if uploaded_file is not None:
 
     if df is not None:
         try:
-            # تنظيف الصفوف التي تحتوي على فواصل فارغة فقط
-            df = df.dropna(how='all', axis=0)
-            
-            # 2. البحث عن صف البيانات (يبدأ من الصف الذي يحتوي على كلمة أسوان)
-            # سنقوم بتصفية الصفوف التي تحتوي على اسم إدارة تعليمية حقيقية
-            keywords = ['أسوان', 'دراو', 'نصر', 'كوم أمبو', 'إدفو']
-            
-            extracted_data = []
-            for _, row in df.iterrows():
-                row_list = row.dropna().tolist()
-                # التحقق إذا كان الصف يحتوي على اسم إدارة في بدايته
-                if any(k in str(row.values) for k in keywords):
-                    # استخلاص: الاسم (أول نص)، الفصول (الرقم قبل الأخير)، التلاميذ (آخر رقم)
-                    name = [str(x) for x in row.values if any(k in str(x) for k in keywords)][0]
-                    # استخراج الأرقام فقط من الصف
-                    nums = [pd.to_numeric(x, errors='coerce') for x in row.values if pd.notnull(x)]
-                    nums = [x for x in nums if not pd.isna(x)]
-                    
-                    if len(nums) >= 2:
-                        extracted_data.append({
-                            'الإدارة': name,
-                            'الفصول': nums[-2], # قبل الأخير
-                            'التلاميذ': nums[-1] # الأخير
-                        })
+            # 2. استخراج البيانات بذكاء
+            extracted_rows = []
+            # أسماء الإدارات المتوقع وجودها في الملف
+            target_admins = ['أسوان', 'دراو', 'نصر', 'كوم أمبو', 'إدفو', 'أدفو'] 
 
-            final_df = pd.DataFrame(extracted_data)
+            for _, row in df.iterrows():
+                # تحويل الصف لنص واحد للبحث فيه
+                row_str = " ".join(row.astype(str).values)
+                
+                for admin in target_admins:
+                    if admin in row_str:
+                        # استخراج الأرقام فقط من هذا الصف
+                        nums = []
+                        for val in row.values:
+                            try:
+                                # تنظيف الرقم من الفواصل أو المسافات
+                                clean_val = str(val).replace(',', '').strip()
+                                n = float(clean_val)
+                                if n > 0: nums.append(n)
+                            except:
+                                continue
+                        
+                        # في ملفك: آخر رقمين هما دائماً (الفصول، التلاميذ)
+                        if len(nums) >= 2:
+                            extracted_rows.append({
+                                'الإدارة': admin,
+                                'الفصول': nums[-2],
+                                'التلاميذ': nums[-1]
+                            })
+                        break
+
+            final_df = pd.DataFrame(extracted_rows).drop_duplicates(subset=['الإدارة'])
 
             if not final_df.empty:
-                # 3. العمليات الحسابية
+                # 3. الحسابات
                 final_df['الكثافة'] = final_df['التلاميذ'] / final_df['الفصول']
-                threshold = 40 # حد التحذير
+                threshold = 40
 
-                # --- العرض ---
-                st.success("تم استخراج البيانات بنجاح!")
-                
-                # كروت الإحصاء
-                c1, c2, c3 = st.columns(3)
-                c1.metric("إجمالي التلاميذ", f"{int(final_df['التلاميذ'].sum()):,}")
-                c2.metric("إجمالي الفصول", f"{int(final_df['الفصول'].sum()):,}")
-                c3.metric("متوسط الكثافة", f"{final_df['الكثافة'].mean():.1f}")
-
-                # الرسم البياني
-                st.subheader("📈 مؤشر كثافة الفصول حسب الإدارة")
-                fig, ax = plt.subplots(figsize=(10, 5))
-                colors = ['#ff4b4b' if x > threshold else '#00cc96' for x in final_df['الكثافة']]
-                sns.barplot(data=final_df, x='الإدارة', y='الكثافة', palette=colors, ax=ax)
-                ax.axhline(threshold, color='#31333f', linestyle='--', label='حد الأمان')
-                plt.xticks(rotation=45)
-                st.pyplot(fig)
-
-                # الجدول الملون
-                st.subheader("⚠️ جدول المتابعة والتحذير")
-                def style_density(v):
-                    color = 'red' if v > threshold else 'green'
-                    return f'color: {color}; font-weight: bold'
-
-                st.dataframe(final_df.style.applymap(style_density, subset=['الكثافة']))
-            else:
-                st.error("لم يتم العثور على بيانات الإدارات داخل الملف. تأكد من صحة أسماء الإدارات.")
-
-        except Exception as e:
-            st.error(f"خطأ في معالجة المحتوى: {e}")
+                # --- العرض المرئي ---
+                st.success(f"تم العثور على بيانات لـ {len(final_df)} إدارات تعليمية")
